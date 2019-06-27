@@ -1,2 +1,18 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+.coverage
+MANIFEST
+.cache/
+cover/
+build/
+crawlframe.egg-info/
+*.pyc
+*.swp
+*.egg
+*.whl
+*.gz
+env/
+test.py
+tests.py
+dist/
+.venv/
+.idea/
+__pycache__/

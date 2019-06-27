@@ -1,5 +1,6 @@
 conciseSchedules -- 这是一个简洁的兼容crontab语法的定时器工具
 ==========================
+[![PyPI](https://img.shields.io/pypi/v/conciseSchedules.svg)](https://pypi.org/project/conciseSchedules/)
 
 ## conciseSchedules 有两种工作模式:
 一种是"crontab_tasks", 兼容 crontab 语法, 只支持以shell启动脚本的方式启动定时器, 即subprocess.Popen所支持的方式启动. 最小时间颗粒度为分钟.

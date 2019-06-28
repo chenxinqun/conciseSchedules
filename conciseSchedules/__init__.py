@@ -7,7 +7,7 @@
 '''
 __title__ = 'conciseSchedules'
 __url__ = 'https://github.com/chenxinqun/conciseSchedules'
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 __author__ = 'ChenXinqun'
 __author_email__ = 'chenxinqun163@163.com'
 __maintainer__ = '{} <{}>'.format(__author__, __author_email__)
@@ -233,11 +233,16 @@ class Schedules:
             raise Exception('crontab syntax error')
 
     @classmethod
-    def __start_analyze(cls, collec: dict, tz: str=None):
+    def get_date_time(cls, tz: str=None):
         if not tz:
             tz = 'Asia/Shanghai'
         timezone = pytz.timezone(tz)
         date_time = datetime.now(timezone)
+        return date_time
+
+    @classmethod
+    def __start_analyze(cls, collec: dict, tz: str=None):
+        date_time = cls.get_date_time(tz)
         condition = []
         for item in collec:
             tm = getattr(date_time, item)
@@ -352,7 +357,7 @@ class Schedules:
             assert isinstance(item.get(self.__tasks_key_args), tuple) or item.get(self.__tasks_key_args) is None
             assert isinstance(item.get(self.__tasks_key_kwargs), dict) or item.get(self.__tasks_key_kwargs) is None
         elif stp == 4:
-            assert item[0] in item[3] or item[1] in item[3]
+            assert item[0] in item[2] or item[1] in item[2]
         elif stp == 5:
             assert item[0] or item[1]
 
@@ -466,10 +471,10 @@ class Schedules:
         kwargs.setdefault('tz', self.tzinfo)
         self.__schedules_start(**kwargs)
 
-    def __run_tasks(self, task_fun, task_list, pool=None, async=False):
+    def __run_tasks(self, task_fun, task_list, pool=None, is_async=False):
         if pool is None:
             pool = self._get_pool()
-        if async:
+        if is_async:
             pool.map_async(task_fun, task_list).get()
         else:
             pool.map(task_fun, task_list)
@@ -486,7 +491,7 @@ class Schedules:
                 Thread(
                     target=self.__run_tasks,
                     args=(self.__start_crontab_task, crontab_tasks),
-                    kwargs={'async':True}
+                    kwargs={'is_async':True}
                 ).start()
 
     def __run_schedule(self):
@@ -501,13 +506,19 @@ class Schedules:
                 Thread(
                     target=self.__run_tasks,
                     args=(self.__start__schedules_task, schedule_tasks),
-                    kwargs={'async':True}
+                    kwargs={'is_async':True}
                 ).start()
 
     def stop(self):
         self.__stop = 1
 
+    def start(self):
+        self.__stop = 0
+
     def run_loop(self):
+        date_time = self.get_date_time(self.tzinfo)
+        msg = '[%s %s] %s start' % (self.tzinfo, date_time.strftime('%Y-%m-%d %H:%M:%S'), self.run_loop.__name__)
+        print(msg)
         p_list = []
         p_list.append(Thread(target=self.__run_crontab))
         p_list.append(Thread(target=self.__run_schedule))
@@ -515,9 +526,14 @@ class Schedules:
             p.start()
         for p in p_list:
             p.join()
-        sys.exit()
+        date_time = self.get_date_time(self.tzinfo)
+        msg = '[%s %s] %s exit' % (self.tzinfo, date_time.strftime('%Y-%m-%d %H:%M:%S'), self.run_loop.__name__)
+        print(msg)
 
     def run(self):
+        date_time = self.get_date_time(self.tzinfo)
+        msg = '[%s %s] %s start' % (self.tzinfo, date_time.strftime('%Y-%m-%d %H:%M:%S'), self.run.__name__)
+        print(msg)
         t_list = []
         crontab_tasks = self.conf.get(self.__key_crontab_tasks)
         if crontab_tasks:
@@ -539,7 +555,9 @@ class Schedules:
             t.start()
         for t in t_list:
             t.join()
-
+        date_time = self.get_date_time(self.tzinfo)
+        msg = '[%s %s] %s exit' % (self.tzinfo, date_time.strftime('%Y-%m-%d %H:%M:%S'), self.run.__name__)
+        print(msg)
 
 scheduler = Schedules()
 
@@ -604,6 +622,10 @@ def task(schedule: dict=None, crontab: str=None, args: tuple=None, kwargs: dict=
 
 def stop():
     return scheduler.stop()
+
+
+def start():
+    return scheduler.start()
 
 
 def run_loop():

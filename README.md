@@ -85,7 +85,7 @@ if __name__ == '__main__':
     scheduler.run_loop()
 
 ``` 
-###需要注意的是, 装饰器, 只支持独立的 function, 不支持任何挂靠在类下面的 method. 如果有需要用到类的时候, 请用 function 封装一层.
+### 需要注意的是, 装饰器, 只支持独立的 function, 不支持任何挂靠在类下面的 method. 如果有需要用到类的时候, 请用 function 封装一层.
 
 如果你要在 "crontab_tasks" 模式使用 crontab 语法, 把以上例子中 'schedule': {} 关键字改成 'crontab': '*/1 * * * * *' 就行了. 要注意 'schedule_tasks' 工作模式下, crontab 支持秒级颗粒度, 第一位是 "秒", 第二位及以后是 "分 时 日 月 周". 
 ----------------------------

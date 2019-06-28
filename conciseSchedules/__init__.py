@@ -352,7 +352,7 @@ class Schedules:
             assert isinstance(item.get(self.__tasks_key_args), tuple) or item.get(self.__tasks_key_args) is None
             assert isinstance(item.get(self.__tasks_key_kwargs), dict) or item.get(self.__tasks_key_kwargs) is None
         elif stp == 4:
-            assert item[0] in item[3] or item[1] in item[3]
+            assert item[0] in item[2] or item[1] in item[2]
         elif stp == 5:
             assert item[0] or item[1]
 

@@ -1,5 +1,6 @@
 conciseSchedules -- 这是一个简洁的兼容crontab语法的定时器工具
 ==========================
+[![PyPI](https://img.shields.io/pypi/v/conciseSchedules.svg)](https://pypi.org/project/conciseSchedules/)
 
 ## conciseSchedules 有两种工作模式:
 一种是"crontab_tasks", 兼容 crontab 语法, 只支持以shell启动脚本的方式启动定时器, 即subprocess.Popen所支持的方式启动. 最小时间颗粒度为分钟.
@@ -84,9 +85,30 @@ if __name__ == '__main__':
     scheduler.run_loop()
 
 ``` 
+#### 需要注意的是, 装饰器, 只支持独立的 function, 不支持任何挂靠在类下面的 method. 如果有需要用到类的时候, 请用 function 封装一层.
 
-如果你要使用 crontab 语法, 把以上例子中 'schedule': {} 关键字改成 'crontab': '*/1 * * * * *' 就行了. 要注意 'schedule_tasks' 工作模式下, crontab 支持秒级颗粒度, 第一位是 "秒", 第二位及以后是 "分 时 日 月 周". 
-----------------------------
+##### 如果需要给被装饰的参数传参, 你可以这样:
+``` 
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# test.py
+
+import conciseSchedules as scheduler
+
+
+@scheduler.task(schedule={'second': -1}, args=('Tony'), kwargs={'age': 18})
+def test(name, age=None):
+    print('hello conciseSchedules!', name, age)
+
+
+if __name__ == '__main__':
+    scheduler.run_loop()
+
+``` 
+
+#### 如果你要在 "crontab_tasks" 模式使用 crontab 语法, 把以上例子中 'schedule': {} 关键字改成 'crontab': '*/1 * * * * *' 就行了. 要注意 'schedule_tasks' 工作模式下, crontab 支持秒级颗粒度, 第一位是 "秒", 第二位及以后是 "分 时 日 月 周". 
+
+================================= 
 ### 下面是"crontab_tasks"工作模式:
 crontab "分 时 日 月 周" 共五种颗粒度, 用空格隔开. 支持语法: "*" 任何时间, "*/3" 每逢3(能整除3), "1-10" 在 1至10之间, "1" 精确到1. 例如: "*/1 1 * * *" 则表示每天1点的每1分钟启动. 如果 周 的参数是 "*/1", 则表示每周启动一次, 且启动时间在周1, 如果是"*/> 1", 则会被解释成"能 整除 大于1的数的星期几启动" 而不是每年的第几周启动. 至于其它, 请参考 crontab 文档.
 ``` 

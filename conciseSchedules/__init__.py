@@ -7,7 +7,7 @@
 '''
 __title__ = 'conciseSchedules'
 __url__ = 'https://github.com/chenxinqun/conciseSchedules'
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 __author__ = 'ChenXinqun'
 __author_email__ = 'chenxinqun163@163.com'
 __maintainer__ = '{} <{}>'.format(__author__, __author_email__)
@@ -299,7 +299,7 @@ class Schedules:
             t = Thread(target=target, args=args, kwargs=kwargs)
             t.start()
             if hasattr(target, '__name__'):
-                name = target
+                name = target.__name__
             else:
                 name = target
             print(
@@ -398,14 +398,14 @@ class Schedules:
                 self.__task_assert(item, 3)
         self.conf = tasks_conf
 
-    def add_task(self, task: Dict[str, dict]):
+    def add_task(self, t: Dict[str, dict]):
         '''
-        :param task: {'crontab_tasks': {'crontab': '*/1 * * * *', 'shell': 'python tests.py'}}
+        :param t: {'crontab_tasks': {'crontab': '*/1 * * * *', 'shell': 'python tests.py'}}
             or {'schedule_tasks': {'crontab': '*/1 * * * * *', 'target': tests_run, args=(1,)}}
         :return:
         '''
-        self.__task_assert((task, dict), 0)
-        crontab = task.get(self.__key_crontab_tasks)
+        self.__task_assert((t, dict), 0)
+        crontab = t.get(self.__key_crontab_tasks)
         self.__task_assert((crontab, dict), 1)
         if crontab:
             self.__task_assert(crontab, 3)
@@ -413,7 +413,7 @@ class Schedules:
                 self.conf[self.__key_crontab_tasks] = []
             self.conf[self.__key_crontab_tasks].append(crontab)
 
-        schedule = task.get(self.__key_schedule_tasks)
+        schedule = t.get(self.__key_schedule_tasks)
         self.__task_assert((schedule, dict), 1)
         if schedule:
             self.__task_assert(schedule, 3)
@@ -421,7 +421,7 @@ class Schedules:
                 self.conf[self.__key_schedule_tasks] = []
             self.conf[self.__key_schedule_tasks].append(schedule)
 
-    def task(self, schedule: dict=None, crontab: str=None):
+    def task(self, schedule: dict=None, crontab: str=None, args: tuple=None, kwargs: dict=None):
         add_task = self.add_task
         key_schedule_tasks = self.__key_schedule_tasks
         tasks_key_schedule = self.__tasks_key_schedule
@@ -430,18 +430,22 @@ class Schedules:
         tasks_key_args = self.__tasks_key_args
         tasks_key_kwargs = self.__tasks_key_kwargs
         def add(func):
-            def wrap(*args, **kwargs):
-                task = {key_schedule_tasks:
-                         {
-                             tasks_key_schedule: schedule,
-                             tasks_key_crontab: crontab,
-                             tasks_key_target: func,
-                             tasks_key_args: args,
-                             tasks_key_kwargs: kwargs,
-                         }
+            def wrap(*params, __task__=True, **kwparams):
+                if not __task__:
+                    t = {key_schedule_tasks:
+                        {
+                            tasks_key_schedule: schedule,
+                            tasks_key_crontab: crontab,
+                            tasks_key_target: func,
+                            tasks_key_args: args,
+                            tasks_key_kwargs: kwargs,
+                        }
                     }
-                add_task(task)
-            return wrap()
+                    add_task(t)
+                    return func
+                else:
+                    return func
+            return wrap(__task__=False)
         return add
 
     def _get_pool(self):
@@ -455,11 +459,11 @@ class Schedules:
         return Pool(size)
 
     def __start_crontab_task(self, kwargs: dict):
-        kwargs['tz'] = self.tzinfo
+        kwargs.setdefault('tz', self.tzinfo)
         self.__crontab_start(**kwargs)
 
     def __start__schedules_task(self, kwargs: dict):
-        kwargs['tz'] = self.tzinfo
+        kwargs.setdefault('tz', self.tzinfo)
         self.__schedules_start(**kwargs)
 
     def __run_tasks(self, task_fun, task_list, pool=None, async=False):
@@ -585,16 +589,17 @@ def set_tasks(tasks_conf: Dict[str, List[Dict[str, Any]]]):
     return scheduler.set_tasks(tasks_conf)
 
 
-def add_task(task: Dict[str, dict]):
+def add_task(t: Dict[str, dict]):
     '''
-    :param task: {'crontabs':'',  'shell': ''}
+    :param t: {'crontab_tasks': {'crontab': '*/1 * * * *', 'shell': 'python tests.py'}}
+            or {'schedule_tasks': {'crontab': '*/1 * * * * *', 'target': tests_run, args=(1,)}}
     :return:
     '''
-    return scheduler.add_task(task)
+    return scheduler.add_task(t)
 
 
-def task(schedule: dict=None, crontab: str=None):
-    return scheduler.task(schedule, crontab)
+def task(schedule: dict=None, crontab: str=None, args: tuple=None, kwargs: dict=None):
+    return scheduler.task(schedule, crontab, args, kwargs)
 
 
 def stop():

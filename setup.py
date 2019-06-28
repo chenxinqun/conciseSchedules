@@ -2,9 +2,8 @@
 # -*- coding: utf-8 -*-
 '''
 @File  : setup.py
-@Author: XinQun
-@Date  : 2019/1/18 16:26
-@Company: 宏数科技
+@Author: ChenXinqun
+@Date  : 2019/5/25 17:21
 '''
 import sys
 import pathlib

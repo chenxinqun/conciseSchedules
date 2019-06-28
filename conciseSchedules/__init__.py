@@ -466,10 +466,10 @@ class Schedules:
         kwargs.setdefault('tz', self.tzinfo)
         self.__schedules_start(**kwargs)
 
-    def __run_tasks(self, task_fun, task_list, pool=None, async=False):
+    def __run_tasks(self, task_fun, task_list, pool=None, is_async=False):
         if pool is None:
             pool = self._get_pool()
-        if async:
+        if is_async:
             pool.map_async(task_fun, task_list).get()
         else:
             pool.map(task_fun, task_list)
@@ -486,7 +486,7 @@ class Schedules:
                 Thread(
                     target=self.__run_tasks,
                     args=(self.__start_crontab_task, crontab_tasks),
-                    kwargs={'async':True}
+                    kwargs={'is_async':True}
                 ).start()
 
     def __run_schedule(self):
@@ -501,7 +501,7 @@ class Schedules:
                 Thread(
                     target=self.__run_tasks,
                     args=(self.__start__schedules_task, schedule_tasks),
-                    kwargs={'async':True}
+                    kwargs={'is_async':True}
                 ).start()
 
     def stop(self):

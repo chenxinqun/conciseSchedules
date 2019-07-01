@@ -90,6 +90,12 @@ class Schedules:
     __tasks_key_schedule = 'schedule'
     __tasks_key_target = 'target'
     __tasks_key_kwargs = 'kwargs'
+    __max_7 = ['weekday']
+    __max_12 = ['month']
+    __max_24 = ['hour']
+    __max_31 = ['day']
+    __max_60 = ['second', 'minute']
+
 
     def __init__(self, tasks_conf: Dict[str, List[Dict[str, Any]]]=None):
         if tasks_conf is None:
@@ -97,6 +103,7 @@ class Schedules:
         else:
             self.set_tasks(tasks_conf)
         self.set_timezone()
+        self.pool = None
         self.__stop = 0
 
     @classmethod
@@ -111,12 +118,16 @@ class Schedules:
                     c[item] = default[item]
                 elif cls.__every_pattern.match(val):
                     step = int(val.split('/')[1])
+                    cls.item_out_of_range(item, step)
                     c[item] = [x for x in default[item] if x % step == 0]
                 elif cls.__between_pattern.match(val):
                     between = val.split('-')
+                    for i in between:
+                        cls.item_out_of_range(item, int(i))
                     c[item] = [x for x in default[item] if str(x) in between]
                 elif cls.__at_pattern.match(val):
                     at = int(val)
+                    cls.item_out_of_range(item, at)
                     c[item] = [x for x in default[item] if x == at]
                 else:
                     raise TypeError('%s must be "*" or "*/int" or "int" or "int-int", got "%s"' % (item, val))
@@ -135,16 +146,6 @@ class Schedules:
                 if cls.__any_pattern.match(a.get('second')):
                     c['second'] = point
 
-            if not cls.__any_pattern.match(a.get('month')):
-                if cls.__any_pattern.match(a.get('day')):
-                    c['hour'] = point
-                if cls.__any_pattern.match(a.get('hour')):
-                    c['hour'] = point
-                if cls.__any_pattern.match(kwargs.get('minute')):
-                    c['minute'] = point
-                if cls.__any_pattern.match(a.get('second')):
-                    c['second'] = point
-
             if not cls.__any_pattern.match(a.get('weekday')):
                 if cls.__any_pattern.match(a.get('hour')):
                     c['hour'] = point
@@ -153,11 +154,40 @@ class Schedules:
                 if cls.__any_pattern.match(a.get('second')):
                     c['second'] = point
 
+            if not cls.__any_pattern.match(a.get('month')):
+                if cls.__any_pattern.match(a.get('day')):
+                    c['day'] = point
+                if cls.__any_pattern.match(a.get('hour')):
+                    c['hour'] = point
+                if cls.__any_pattern.match(kwargs.get('minute')):
+                    c['minute'] = point
+                if cls.__any_pattern.match(a.get('second')):
+                    c['second'] = point
             return c
+        except IndexError as e:
+            print_exc()
+            raise e
         except Exception as e:
-            print(e)
             print_exc()
             raise Exception('crontab syntax error')
+
+    @staticmethod
+    def item_out_of_range(k, v):
+        cls = Schedules
+        if k in cls.__max_7 and v >= 7:
+            return cls.out_of_range(k, v)
+        elif k in cls.__max_12 and v > 12:
+            return cls.out_of_range(k, v)
+        elif k in cls.__max_24 and v >= 24:
+            return cls.out_of_range(k, v)
+        elif k in cls.__max_31 and v > 31:
+            return cls.out_of_range(k, v)
+        elif k in cls.__max_60 and v >= 60:
+            return cls.out_of_range(k, v)
+
+    @staticmethod
+    def out_of_range(k, v):
+        raise IndexError('%s: %s out of range' % (k, v))
 
     @classmethod
     def _schedule_syntax_analyze(cls, field: list, kwargs: dict, default: dict):
@@ -178,10 +208,12 @@ class Schedules:
                         else:
                             c[k] = v
                     elif isinstance(arg, int):
-                        if arg == -1:
-                            c[k] = v
+                        if arg < 0:
+                            step = abs(arg)
+                            cls.item_out_of_range(k, step)
+                            c[k] = [x for x in v if x % step == 0]
                         else:
-                            raise IndexError('%s: %s out of range' % (k, arg))
+                            cls.out_of_range(k, arg)
                     elif isinstance(arg, tuple):
                         assert len(arg) == 2
                         start, end = arg
@@ -465,15 +497,24 @@ class Schedules:
 
     def __start_crontab_task(self, kwargs: dict):
         kwargs.setdefault('tz', self.tzinfo)
-        self.__crontab_start(**kwargs)
+        try:
+            self.__crontab_start(**kwargs)
+        except Exception as e:
+            print_exc()
+            raise e
 
     def __start__schedules_task(self, kwargs: dict):
         kwargs.setdefault('tz', self.tzinfo)
-        self.__schedules_start(**kwargs)
+        try:
+            self.__schedules_start(**kwargs)
+        except Exception as e:
+            print_exc()
+            raise e
 
     def __run_tasks(self, task_fun, task_list, pool=None, is_async=False):
-        if pool is None:
-            pool = self._get_pool()
+        if self.pool is None:
+            self.pool = self._get_pool()
+        pool = self.pool
         if is_async:
             pool.map_async(task_fun, task_list).get()
         else:
@@ -491,7 +532,7 @@ class Schedules:
                 Thread(
                     target=self.__run_tasks,
                     args=(self.__start_crontab_task, crontab_tasks),
-                    kwargs={'is_async':True}
+                    kwargs={'is_async':True}, daemon=True
                 ).start()
 
     def __run_schedule(self):
@@ -506,7 +547,7 @@ class Schedules:
                 Thread(
                     target=self.__run_tasks,
                     args=(self.__start__schedules_task, schedule_tasks),
-                    kwargs={'is_async':True}
+                    kwargs={'is_async':True}, daemon=True
                 ).start()
 
     def stop(self):
@@ -519,13 +560,13 @@ class Schedules:
         date_time = self.get_date_time(self.tzinfo)
         msg = '[%s %s] %s start' % (self.tzinfo, date_time.strftime('%Y-%m-%d %H:%M:%S'), self.run_loop.__name__)
         print(msg)
-        p_list = []
-        p_list.append(Thread(target=self.__run_crontab))
-        p_list.append(Thread(target=self.__run_schedule))
-        for p in p_list:
-            p.start()
-        for p in p_list:
-            p.join()
+        t_list = []
+        t_list.append(Thread(target=self.__run_crontab))
+        t_list.append(Thread(target=self.__run_schedule))
+        for t in t_list:
+            t.start()
+        for t in t_list:
+            t.join()
         date_time = self.get_date_time(self.tzinfo)
         msg = '[%s %s] %s exit' % (self.tzinfo, date_time.strftime('%Y-%m-%d %H:%M:%S'), self.run_loop.__name__)
         print(msg)

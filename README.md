@@ -6,7 +6,7 @@ conciseSchedules -- 这是一个简洁的兼容crontab语法的定时器工具
 一种是"crontab_tasks", 兼容 crontab 语法, 只支持以shell启动脚本的方式启动定时器, 即subprocess.Popen所支持的方式启动. 最小时间颗粒度为分钟.
 一种是"schedule_tasks",  既兼容 crontab 语法, 又支持 conciseSchedules 语法, 只支持通过 python callable 对象启动定时器, 即threading.Thread所支持的方式启动. 最小时间颗粒度为秒.
 ##### 首先, 介绍一下"schedule_tasks"工作模式, 要使用它很简单:
-conciseSchedules {   
+'schedule': {   
                     'second': int or None or tuple(strat, end),
                     'minute': int or None or tuple(strat, end),
                     'hour': int or None or tuple(strat, end),
@@ -106,7 +106,7 @@ if __name__ == '__main__':
 
 ``` 
 
-#### 如果你要在 "crontab_tasks" 模式使用 crontab 语法, 把以上例子中 'schedule': {} 关键字改成 'crontab': '*/1 * * * * *' 就行了. 要注意 'schedule_tasks' 工作模式下, crontab 支持秒级颗粒度, 第一位是 "秒", 第二位及以后是 "分 时 日 月 周". 
+#### 如果你要在 "schedule_tasks" 模式使用 crontab 语法, 把以上例子中 'schedule': {} 关键字改成 'crontab': '*/1 * * * * *' 就行了. 要注意 'schedule_tasks' 工作模式下, crontab 支持秒级颗粒度, 第一位是 "秒", 第二位及以后是 "分 时 日 月 周". 
 
 ================================= 
 ### 下面是"crontab_tasks"工作模式:

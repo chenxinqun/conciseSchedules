@@ -127,10 +127,10 @@ if __name__ == '__main__':
     import conciseSchedules as scheduler
     tasks_conf = {
         'crontab_tasks':[
-        {'crontab':'*/1 ', 'target': test,}    # 每分钟启动一次. 默认是每分钟的第1秒.
+        {'crontab':'*/1 ', 'shell': "python test.py",}    # 每分钟启动一次. 默认是每分钟的第1秒.
         {'crontab':"", 'target': test,}    # 每小时的10-12分启动
-        {'crontab':{'hour': -1)}, 'target': test,}           # 每小时启动一次.默认是每小时的1分1秒.
-        {'crontab':{'minute': 1, 'hour': 10, 'day': 1, 'month': 10)}, 'target': test,}     # 每年10月1日10点1分启动.
+        {'crontab':{'hour': -1)}, 'shell': "python test.py",}           # 每小时启动一次.默认是每小时的1分1秒.
+        {'crontab':{'minute': 1, 'hour': 10, 'day': 1, 'month': 10)}, 'shell': "python test.py",}     # 每年10月1日10点1分启动.
         ], 
     }
     scheduler.set_tasks(tasks_conf)

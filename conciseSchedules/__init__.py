@@ -132,36 +132,36 @@ class Schedules:
                 else:
                     raise TypeError('%s must be "*" or "*/int" or "int" or "int-int", got "%s"' % (item, val))
 
-            if not cls.__any_pattern.match(a.get('hour')):
-                if cls.__any_pattern.match(kwargs.get('minute')):
+            if not cls.__any_pattern.match(a.get('hour', '')):
+                if cls.__any_pattern.match(a.get('minute', '')):
                     c['minute'] = point
-                if cls.__any_pattern.match(a.get('second')):
+                if cls.__any_pattern.match(a.get('second', '')):
                     c['second'] = point
 
-            if not cls.__any_pattern.match(a.get('day')):
+            if not cls.__any_pattern.match(a.get('day', '')):
+                if cls.__any_pattern.match(a.get('hour', '')):
+                    c['hour'] = point
+                if cls.__any_pattern.match(a.get('minute', '')):
+                    c['minute'] = point
+                if cls.__any_pattern.match(a.get('second', '')):
+                    c['second'] = point
+
+            if not cls.__any_pattern.match(a.get('weekday', '')):
                 if cls.__any_pattern.match(a.get('hour')):
                     c['hour'] = point
-                if cls.__any_pattern.match(kwargs.get('minute')):
+                if cls.__any_pattern.match(a.get('minute', '')):
                     c['minute'] = point
-                if cls.__any_pattern.match(a.get('second')):
+                if cls.__any_pattern.match(a.get('second', '')):
                     c['second'] = point
 
-            if not cls.__any_pattern.match(a.get('weekday')):
-                if cls.__any_pattern.match(a.get('hour')):
-                    c['hour'] = point
-                if cls.__any_pattern.match(kwargs.get('minute')):
-                    c['minute'] = point
-                if cls.__any_pattern.match(a.get('second')):
-                    c['second'] = point
-
-            if not cls.__any_pattern.match(a.get('month')):
-                if cls.__any_pattern.match(a.get('day')):
+            if not cls.__any_pattern.match(a.get('month', '')):
+                if cls.__any_pattern.match(a.get('day', '')):
                     c['day'] = point
-                if cls.__any_pattern.match(a.get('hour')):
+                if cls.__any_pattern.match(a.get('hour', '')):
                     c['hour'] = point
-                if cls.__any_pattern.match(kwargs.get('minute')):
+                if cls.__any_pattern.match(a.get('minute', '')):
                     c['minute'] = point
-                if cls.__any_pattern.match(a.get('second')):
+                if cls.__any_pattern.match(a.get('second', '')):
                     c['second'] = point
             return c
         except IndexError as e:

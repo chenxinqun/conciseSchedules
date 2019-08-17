@@ -82,6 +82,7 @@ class Schedules:
     __every_pattern = re.compile('^\*/\d{1,2}$')
     __between_pattern = re.compile('^\d{1,2}-\d{1,2}$')
     __at_pattern = re.compile('^\d{1,2}$')
+    __at_more_pattern = re.compile('^\d[\d,]+\d{1,2}$')
     __key_crontab_tasks = 'crontab_tasks'
     __key_schedule_tasks = 'schedule_tasks'
     __tasks_key_args = 'args'
@@ -121,14 +122,19 @@ class Schedules:
                     cls.item_out_of_range(item, step)
                     c[item] = [x for x in default[item] if x % step == 0]
                 elif cls.__between_pattern.match(val):
-                    between = val.split('-')
+                    between = [int(x) for x in val.split('-')]
                     for i in between:
                         cls.item_out_of_range(item, int(i))
-                    c[item] = [x for x in default[item] if str(x) in between]
+                    c[item] = [x for x in default[item] if x in between]
                 elif cls.__at_pattern.match(val):
                     at = int(val)
                     cls.item_out_of_range(item, at)
                     c[item] = [x for x in default[item] if x == at]
+                elif cls.__at_more_pattern.match(val):
+                    at_more = [int(x) for x in val.split(',')]
+                    for i in at_more:
+                        cls.item_out_of_range(item, i)
+                    c[item] = [x for x in default[item] if x in at_more]
                 else:
                     raise TypeError('%s must be "*" or "*/int" or "int" or "int-int", got "%s"' % (item, val))
 

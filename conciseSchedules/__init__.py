@@ -17,35 +17,6 @@ __copyright__ = 'Copyright 2019 {}'.format(__author__)
 __description__ = 'A Concise Schedules module -- {} for Python.'.format(__title__)
 ###===###
 
-"""
-from conciseSchedules import scheduler
-# import conciseSchedules as scheduler
-tasks_conf = {'crontab_tasks': [
-    {'crontab': '*/1 * * * *', 'shell': 'python tests.py'}
-    ], 
-    'schedule_tasks':[
-        {
-            'schedule': {
-                            'second': int or None or tuple(strat, end),
-                            'minute': int or None or tuple(strat, end),
-                            'hour': int or None or tuple(strat, end),
-                            'day': int or None or tuple(strat, end),
-                            'month': int or None or tuple(strat, end),
-                            'weekday': int or None or tuple(strat, end),
-                        }
-            'crontab': '*/1(sechond) * * * * *'
-            'target': func,
-            'args': func args,
-            'kwargs': func kwargs,
-        }
-    ]
-}
-scheduler.set_tasks(tasks_conf)
-scheduler.run_loop()
-if use crontab, you need use scheduler.run()
-if you need dynamically add task, use scheduler.add_task({'crontab_tasks': {'crontab': '*/1 * * * *', 'shell': 'python tests.py'}})
-if you need dynamically add task, use scheduler.add_task({'schedule_tasks': {'crontab': '*/1 * * * * *', 'target': tests_run, args=(arg1,)}})
-"""
 
 import re
 import sys
@@ -54,7 +25,7 @@ import time
 from copy import deepcopy
 from threading import Thread
 from subprocess import Popen
-from typing import List, Dict, Any, Callable
+from typing import List, Dict, Any, Callable, Tuple
 from datetime import datetime
 from traceback import print_exc
 from tzlocal import get_localzone
@@ -62,6 +33,66 @@ from multiprocessing.pool import ThreadPool as Pool
 
 
 class Schedules:
+    '''
+ 使用实例:
+ from conciseSchedules import scheduler
+ # import conciseSchedules as scheduler
+ tasks_conf = {'crontab_tasks': [
+     {'crontab': '*/1 * * * *', 'shell': 'python tests.py'}
+     ],
+     'schedule_tasks':[
+         {
+             'schedule': {
+                             'second': int or None or tuple(strat, end),
+                             'minute': int or None or tuple(strat, end),
+                             'hour': int or None or tuple(strat, end),
+                             'day': int or None or tuple(strat, end),
+                             'month': int or None or tuple(strat, end),
+                             'weekday': int or None or tuple(strat, end),
+                         }
+             'crontab': '*/1(sechond) * * * * *'
+             'target': func,
+             'args': func args,
+             'kwargs': func kwargs,
+         }
+     ]
+ }
+ scheduler.set_tasks(tasks_conf)
+ scheduler.run_loop()
+ 如果配合Linux的crontab使用, 请使用 scheduler.run() 方法
+ 如果要在程序中动态的添加 task, 请使用 scheduler.add_task({'crontab_tasks': {'crontab': '*/1 * * * *', 'shell': 'python tests.py'}})
+ 或者  scheduler.add_task({'schedule_tasks': {'crontab': '*/1 * * * * *', 'target': tests_run, args=(arg1,)}})
+
+ 类参数说明:
+ Schedules.pool_size: 线程池大小
+ Schedules.__point:  默认时间点, 没有设置某时间是, 用此值
+ Schedules.__time_field_crontab:  crontab的默认字段
+ Schedules.__all_time_crontab:  所有的crontab时间范围
+ Schedules.__default_crontab:   crontab默认时间配置
+ Schedules.__time_field_schedule:  schedule的默认字段
+ Schedules.__all_time_schedule:  schedule的所有时间范围
+ Schedules.__default_schedule:  schedule的默认时间配置
+ Schedules.__any_pattern:  crontab语法校验正则
+ Schedules.__every_pattern:  crontab语法校验正则
+ Schedules.__between_pattern:  crontab语法校验正则
+ Schedules.__at_pattern:  crontab语法校验正则
+ Schedules.__at_more_pattern:  crontab语法校验正则
+ Schedules.__key_crontab_tasks: 配置字典中必要的参数名
+ Schedules.__key_schedule_tasks:  配置字典中必要的参数名
+ Schedules.__tasks_key_args:  配置字典中必要的参数名
+ Schedules.__tasks_key_shell: 配置字典中必要的参数名
+ Schedules.__tasks_key_crontab: 配置字典中必要的参数名
+ Schedules.__tasks_key_schedule: 配置字典中必要的参数名
+ Schedules.__tasks_key_target: 配置字典中必要的参数名
+ Schedules.__tasks_key_kwargs: 配置字典中必要的参数名
+ Schedules.__max_7:   最大值为7的时间
+ Schedules.__max_12:  最大值为12的时间
+ Schedules.__max_24:  最大值为24的时间
+ Schedules.__max_31:  最大值为31的时间
+ Schedules.__max_60:  最大值为60的时间
+
+
+    '''
     pool_size = 10
     __point = [1]
     __time_field_crontab = 'minute hour day month weekday'.split(' ')
@@ -97,8 +128,7 @@ class Schedules:
     __max_31 = ['day']
     __max_60 = ['second', 'minute']
 
-
-    def __init__(self, tasks_conf: Dict[str, List[Dict[str, Any]]]=None):
+    def __init__(self, tasks_conf: Dict[str, List[Dict[str, Any]]] = None):
         if tasks_conf is None:
             self.conf = {}
         else:
@@ -108,7 +138,14 @@ class Schedules:
         self.__stop = 0
 
     @classmethod
-    def _crontab_syntax_analyze(cls, field: list, args: str, default: dict):
+    def _crontab_syntax_analyze(cls, field: list, args: str, default: dict) -> dict:
+        '''
+
+        :param field:
+        :param args:
+        :param default:
+        :return:
+        '''
         try:
             point = cls.__point
             c = {}
@@ -178,7 +215,13 @@ class Schedules:
             raise Exception('crontab syntax error')
 
     @staticmethod
-    def item_out_of_range(k, v):
+    def item_out_of_range(k, v) -> None:
+        '''
+
+        :param k:
+        :param v:
+        :return:
+        '''
         cls = Schedules
         if k in cls.__max_7 and v >= 7:
             return cls.out_of_range(k, v)
@@ -192,11 +235,24 @@ class Schedules:
             return cls.out_of_range(k, v)
 
     @staticmethod
-    def out_of_range(k, v):
+    def out_of_range(k, v) -> None:
+        '''
+
+        :param k:
+        :param v:
+        :return:
+        '''
         raise IndexError('%s: %s out of range' % (k, v))
 
     @classmethod
-    def _schedule_syntax_analyze(cls, field: list, kwargs: dict, default: dict):
+    def _schedule_syntax_analyze(cls, field: list, kwargs: dict, default: dict) -> dict:
+        '''
+
+        :param field:
+        :param kwargs:
+        :param default:
+        :return:
+        '''
         try:
             point = cls.__point
             c = {}
@@ -271,7 +327,7 @@ class Schedules:
             raise Exception('crontab syntax error')
 
     @classmethod
-    def get_date_time(cls, tz: str=None):
+    def get_date_time(cls, tz: str = None):
         if not tz:
             tz = 'Asia/Shanghai'
         timezone = pytz.timezone(tz)
@@ -279,7 +335,13 @@ class Schedules:
         return date_time
 
     @classmethod
-    def __start_analyze(cls, collec: dict, tz: str=None):
+    def __start_analyze(cls, collec: dict, tz: str = None) -> Tuple[List[bool], datetime]:
+        '''
+
+        :param collec:
+        :param tz:
+        :return:
+        '''
         date_time = cls.get_date_time(tz)
         condition = []
         for item in collec:
@@ -293,7 +355,14 @@ class Schedules:
         return condition, date_time
 
     @classmethod
-    def __crontab_start(cls, crontab: str, shell: str, tz: str =None):
+    def __crontab_start(cls, crontab: str, shell: str, tz: str = None) -> None:
+        '''
+
+        :param crontab:
+        :param shell:
+        :param tz:
+        :return:
+        '''
         c = cls._crontab_syntax_analyze(cls.__time_field_crontab, crontab, cls.__default_crontab)
         condition, date_time = cls.__start_analyze(c, tz)
         tzinfo = date_time.tzinfo
@@ -307,12 +376,12 @@ class Schedules:
     @classmethod
     def __schedules_start(
             cls, target: Callable,
-            schedule: dict=None,
-            crontab: str=None,
-            args: tuple=None,
-            kwargs: dict=None,
+            schedule: dict = None,
+            crontab: str = None,
+            args: tuple = None,
+            kwargs: dict = None,
             tz: str = None
-    ):
+    ) -> None:
         '''
         :param target: a callable obj
         :param schedule: a dict like {
@@ -351,7 +420,12 @@ class Schedules:
             )
             t.join()
 
-    def set_timezone(self, tz: str=None):
+    def set_timezone(self, tz: str = None) -> None:
+        '''
+
+        :param tz:
+        :return:
+        '''
         if isinstance(tz, str):
             tz_list = self.timezone_listing()
             if tz not in tz_list:
@@ -363,21 +437,27 @@ class Schedules:
             tzinfo = 'Asia/Shanghai'
         self.tzinfo = str(tzinfo)
 
-    def timezone_listing(self, country: str=None):
+    def timezone_listing(self, country: str = None) -> list:
         '''
-        :param country: a country code for example 'cn', 'us' or use self.timezon_countrys() got!
-        if country is None return ALL
+        :param country: a country code for example 'cn', 'us'
+         or use self.timezon_countrys() got!
+         if country is None return ALL
         :return: the country timezone city list, default cn
         '''
         if country is None:
             return pytz.common_timezones
         return pytz.country_timezones(country)
 
-    def timezon_countrys(self):
+    def timezon_countrys(self) -> dict:
         ''':return countrys name dict'''
         return dict(pytz.country_names)
 
-    def __task_assert(self, item, stp=0):
+    def __task_assert(self, item, stp=0) -> None:
+        '''
+        :param item:
+        :param stp:
+        :return:
+        '''
         if stp == 0:
             assert isinstance(*item)
         elif stp == 1:
@@ -399,33 +479,36 @@ class Schedules:
         elif stp == 5:
             assert item[0] or item[1]
 
-    def set_pool_size(self, size: int):
+    def set_pool_size(self, size: int) -> None:
+        '''这个方法用来重设 pool_size(默认值为10)'''
         self.__task_assert((size, int), 0)
         Schedules.pool_size = size
 
-    def set_tasks(self, tasks_conf: Dict[str, List[Dict[str, Any]]]):
+    def set_tasks(self, tasks_conf: Dict[str, List[Dict[str, Any]]]) -> None:
         '''
+         这是一个用来批量添加任务的方法
         :param tasks_conf: {
-            'crontab_tasks': [{'crontab_tasks': '', 'shell': ''}],
-            'schedule_tasks':
-                [
-                    {
-                        'schedule': {
-                            'second': int or None or tuple(strat, end),
-                            'minute': int or None or tuple(strat, end),
-                            'hour': int or None or tuple(strat, end),
-                            'day': int or None or tuple(strat, end),
-                            'month': int or None or tuple(strat, end),
-                            'weekday': int or None or tuple(strat, end),
-                        }
-                        'crontab': '*/1(sechond) * * * * *'   # str , the model add sechond.
-                        'target': func,
-                        'args': func args,
-                        'kwargs': func kwargs,
-                }
-            ]
-        }
+             'crontab_tasks': [{'crontab_tasks': '', 'shell': ''}],
+             'schedule_tasks':
+                 [
+                     {
+                         'schedule': {
+                             'second': int or None or tuple(strat, end),
+                             'minute': int or None or tuple(strat, end),
+                             'hour': int or None or tuple(strat, end),
+                             'day': int or None or tuple(strat, end),
+                             'month': int or None or tuple(strat, end),
+                             'weekday': int or None or tuple(strat, end),
+                         }
+                         'crontab': '*/1(sechond) * * * * *'   # str , the model add sechond.
+                         'target': func,
+                         'args': func args,
+                         'kwargs': func kwargs,
+                 }
+             ]
+         }
         :return:
+
         '''
         self.__task_assert((tasks_conf, dict), 0)
         self.__task_assert((self.__key_crontab_tasks, self.__key_schedule_tasks, tasks_conf), 4)
@@ -441,11 +524,22 @@ class Schedules:
                 self.__task_assert(item, 3)
         self.conf = tasks_conf
 
-    def add_task(self, t: Dict[str, dict]):
+    def add_task(self, t: Dict[str, dict]) -> None:
         '''
-        :param t: {'crontab_tasks': {'crontab': '*/1 * * * *', 'shell': 'python tests.py'}}
-            or {'schedule_tasks': {'crontab': '*/1 * * * * *', 'target': tests_run, args=(1,)}}
-        :return:
+
+        :param t:
+             {
+         'crontab_tasks': {'crontab': '*/1 * * * *', 'shell': 'python tests.py'}
+         }
+
+         or  {
+         'schedule_tasks': {'crontab': '*/1 * * * * *', 'target': tests_run, args=(1,)}
+         }
+
+         这是一个用来添加单个任务的方法
+
+        :return: None
+
         '''
         self.__task_assert((t, dict), 0)
         crontab = t.get(self.__key_crontab_tasks)
@@ -464,7 +558,15 @@ class Schedules:
                 self.conf[self.__key_schedule_tasks] = []
             self.conf[self.__key_schedule_tasks].append(schedule)
 
-    def task(self, schedule: dict=None, crontab: str=None, args: tuple=None, kwargs: dict=None):
+    def task(self, schedule: dict = None, crontab: str = None, args: tuple = None, kwargs: dict = None) -> Callable:
+        '''
+
+        :param schedule:
+        :param crontab:
+        :param args:
+        :param kwargs:
+        :return:
+        '''
         add_task = self.add_task
         key_schedule_tasks = self.__key_schedule_tasks
         tasks_key_schedule = self.__tasks_key_schedule
@@ -472,7 +574,8 @@ class Schedules:
         tasks_key_target = self.__tasks_key_target
         tasks_key_args = self.__tasks_key_args
         tasks_key_kwargs = self.__tasks_key_kwargs
-        def add(func):
+
+        def add(func) -> Callable:
             def wrap(*params, __task__=True, **kwparams):
                 if not __task__:
                     t = {key_schedule_tasks:
@@ -488,10 +591,16 @@ class Schedules:
                     return func
                 else:
                     return func
+
             return wrap(__task__=False)
+
         return add
 
-    def _get_pool(self):
+    def _get_pool(self) -> Pool:
+        '''
+
+        :return:
+        '''
         crontab_tasks = self.conf.get(self.__key_crontab_tasks) or []
         schedule_tasks = self.conf.get(self.__key_schedule_tasks) or []
         task_len = len(crontab_tasks) + len(schedule_tasks)
@@ -501,7 +610,12 @@ class Schedules:
             size = self.pool_size
         return Pool(size)
 
-    def __start_crontab_task(self, kwargs: dict):
+    def __start_crontab_task(self, kwargs: dict) -> None:
+        '''
+
+        :param kwargs:
+        :return:
+        '''
         kwargs.setdefault('tz', self.tzinfo)
         try:
             self.__crontab_start(**kwargs)
@@ -509,7 +623,12 @@ class Schedules:
             print_exc()
             raise e
 
-    def __start__schedules_task(self, kwargs: dict):
+    def __start__schedules_task(self, kwargs: dict) -> None:
+        '''
+
+        :param kwargs:
+        :return:
+        '''
         kwargs.setdefault('tz', self.tzinfo)
         try:
             self.__schedules_start(**kwargs)
@@ -517,7 +636,15 @@ class Schedules:
             print_exc()
             raise e
 
-    def __run_tasks(self, task_fun, task_list, pool=None, is_async=False):
+    def __run_tasks(self, task_fun, task_list, pool=None, is_async=False) -> None:
+        '''
+
+        :param task_fun:
+        :param task_list:
+        :param pool:
+        :param is_async:
+        :return:
+        '''
         if self.pool is None:
             self.pool = self._get_pool()
         pool = self.pool
@@ -526,7 +653,11 @@ class Schedules:
         else:
             pool.map(task_fun, task_list)
 
-    def __run_crontab(self):
+    def __run_crontab(self) -> None:
+        '''
+
+        :return:
+        '''
         while 1:
             if self.__stop == 1:
                 break
@@ -538,10 +669,13 @@ class Schedules:
                 Thread(
                     target=self.__run_tasks,
                     args=(self.__start_crontab_task, crontab_tasks),
-                    kwargs={'is_async':True}, daemon=True
+                    kwargs={'is_async': True}, daemon=True
                 ).start()
 
-    def __run_schedule(self):
+    def __run_schedule(self) -> None:
+        '''
+        :return:
+        '''
         while 1:
             if self.__stop == 1:
                 break
@@ -553,16 +687,25 @@ class Schedules:
                 Thread(
                     target=self.__run_tasks,
                     args=(self.__start__schedules_task, schedule_tasks),
-                    kwargs={'is_async':True}, daemon=True
+                    kwargs={'is_async': True}, daemon=True
                 ).start()
 
-    def stop(self):
+    def stop(self) -> None:
+        '''
+        :return:
+        '''
         self.__stop = 1
 
-    def start(self):
+    def start(self) -> None:
+        '''
+        :return:
+        '''
         self.__stop = 0
 
-    def run_loop(self):
+    def run_loop(self) -> None:
+        '''
+        :return:
+        '''
         date_time = self.get_date_time(self.tzinfo)
         msg = '[%s %s] %s start' % (self.tzinfo, date_time.strftime('%Y-%m-%d %H:%M:%S'), self.run_loop.__name__)
         print(msg)
@@ -577,7 +720,10 @@ class Schedules:
         msg = '[%s %s] %s exit' % (self.tzinfo, date_time.strftime('%Y-%m-%d %H:%M:%S'), self.run_loop.__name__)
         print(msg)
 
-    def run(self):
+    def run(self) -> None:
+        '''
+        :return:
+        '''
         date_time = self.get_date_time(self.tzinfo)
         msg = '[%s %s] %s start' % (self.tzinfo, date_time.strftime('%Y-%m-%d %H:%M:%S'), self.run.__name__)
         print(msg)
@@ -606,14 +752,20 @@ class Schedules:
         msg = '[%s %s] %s exit' % (self.tzinfo, date_time.strftime('%Y-%m-%d %H:%M:%S'), self.run.__name__)
         print(msg)
 
+
 scheduler = Schedules()
 
 
-def set_timezone(tz: str):
+def set_timezone(tz: str) -> None:
+    '''
+
+    :param tz:
+    :return:
+    '''
     return scheduler.set_timezone(tz)
 
 
-def timezone_listing(country: str = None):
+def timezone_listing(country: str = None) -> list:
     '''
     :param country: a country code for example 'cn', 'us' or use self.timezon_countrys() got!
     if country is None return ALL
@@ -622,39 +774,21 @@ def timezone_listing(country: str = None):
     return scheduler.timezone_listing(country)
 
 
-def timezon_countrys():
+def timezon_countrys() -> dict:
     ''':return countrys name dict'''
     return scheduler.timezon_countrys()
 
 
-def set_tasks(tasks_conf: Dict[str, List[Dict[str, Any]]]):
+def set_tasks(tasks_conf: Dict[str, List[Dict[str, Any]]]) -> None:
     '''
-    :param tasks_conf: {
-            'crontab_tasks': [{'crontab_tasks': '', 'shell': ''}],
-            'schedule_tasks':
-                [
-                    {
-                        'schedule': {
-                            'second': int or None or tuple(strat, end),
-                            'minute': int or None or tuple(strat, end),
-                            'hour': int or None or tuple(strat, end),
-                            'day': int or None or tuple(strat, end),
-                            'month': int or None or tuple(strat, end),
-                            'weekday': int or None or tuple(strat, end),
-                        }
-                        'crontab': '*/1(sechond) * * * * *'   # str , the model add sechond.
-                        'target': func,
-                        'args': func args,
-                        'kwargs': func kwargs,
-                }
-            ]
-        }
+
+    :param tasks_conf:
     :return:
     '''
     return scheduler.set_tasks(tasks_conf)
 
 
-def add_task(t: Dict[str, dict]):
+def add_task(t: Dict[str, dict]) -> None:
     '''
     :param t: {'crontab_tasks': {'crontab': '*/1 * * * *', 'shell': 'python tests.py'}}
             or {'schedule_tasks': {'crontab': '*/1 * * * * *', 'target': tests_run, args=(1,)}}
@@ -663,21 +797,45 @@ def add_task(t: Dict[str, dict]):
     return scheduler.add_task(t)
 
 
-def task(schedule: dict=None, crontab: str=None, args: tuple=None, kwargs: dict=None):
+def task(schedule: dict = None, crontab: str = None, args: tuple = None, kwargs: dict = None) -> Callable:
+    '''
+
+    :param schedule:
+    :param crontab:
+    :param args:
+    :param kwargs:
+    :return:
+    '''
     return scheduler.task(schedule, crontab, args, kwargs)
 
 
-def stop():
+def stop() -> None:
+    '''
+
+    :return:
+    '''
     return scheduler.stop()
 
 
-def start():
+def start() -> None:
+    '''
+
+    :return:
+    '''
     return scheduler.start()
 
 
-def run_loop():
+def run_loop() -> None:
+    '''
+
+    :return:
+    '''
     return scheduler.run_loop()
 
 
-def run():
+def run() -> None:
+    '''
+
+    :return:
+    '''
     return scheduler.run()

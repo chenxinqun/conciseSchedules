@@ -76,7 +76,7 @@ class Schedules:
  Schedules.__every_pattern:  crontab语法校验正则
  Schedules.__between_pattern:  crontab语法校验正则
  Schedules.__at_pattern:  crontab语法校验正则
- Schedules.__at_more_pattern:  crontab语法校验正则
+ Schedules.__and_more_pattern:  crontab语法校验正则
  Schedules.__key_crontab_tasks: 配置字典中必要的参数名
  Schedules.__key_schedule_tasks:  配置字典中必要的参数名
  Schedules.__tasks_key_args:  配置字典中必要的参数名
@@ -113,7 +113,7 @@ class Schedules:
     __every_pattern = re.compile('^\*/\d{1,2}$')
     __between_pattern = re.compile('^\d{1,2}-\d{1,2}$')
     __at_pattern = re.compile('^\d{1,2}$')
-    __at_more_pattern = re.compile('^\d[\d,]+\d{1,2}$')
+    __and_more_pattern = re.compile('^\d[\d,]+\d{1,2}$')
     __key_crontab_tasks = 'crontab_tasks'
     __key_schedule_tasks = 'schedule_tasks'
     __tasks_key_args = 'args'
@@ -167,13 +167,13 @@ class Schedules:
                     at = int(val)
                     cls.item_out_of_range(item, at)
                     c[item] = [x for x in default[item] if x == at]
-                elif cls.__at_more_pattern.match(val):
-                    at_more = [int(x) for x in val.split(',')]
-                    for i in at_more:
+                elif cls.__and_more_pattern.match(val):
+                    and_more = [int(x) for x in val.split(',')]
+                    for i in and_more:
                         cls.item_out_of_range(item, i)
-                    c[item] = [x for x in default[item] if x in at_more]
+                    c[item] = [x for x in default[item] if x in and_more]
                 else:
-                    raise TypeError('%s must be "*" or "*/int" or "int" or "int-int", got "%s"' % (item, val))
+                    raise TypeError('%s must be "*" or "*/int" or "int" or "int-int" or "int,int,int..." , got "%s"' % (item, val))
 
             if not cls.__any_pattern.match(a.get('hour', '')):
                 if cls.__any_pattern.match(a.get('minute', '')):
